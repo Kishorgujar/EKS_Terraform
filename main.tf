@@ -26,11 +26,10 @@ module "vpc" {
   security_group_name = var.security_group_name
 }
 
-
 module "iam_role" {
   source = "./modules/iam_role"
-  account_id  = var.account_id          # Pass the AWS account ID
-  environment = terraform.workspace      # Pass the current workspace
+  account_id  = var.account_id
+  environment = terraform.workspace
   eks_role_name  = var.eks_role_name
   eks_role_tag   = var.eks_role_tag
   node_role_name = var.node_role_name
@@ -41,16 +40,17 @@ module "eks" {
   source              = "./modules/eks"
   region              = var.region
   cluster_name        = var.cluster_name
-  cluster_role_arn    = module.iam_role.eks_role_arn
-  node_role_arn       = module.iam_role.node_role_arn
+  cluster_role_arn    = module.iam_role.eks_role_arn  # Ensure this line is present
+  node_role_arn       = module.iam_role.node_role_arn  # This should also be defined in the iam_role module
   kubernetes_version  = var.kubernetes_version
-  cluster_role_name    = var.cluster_role_name
-  node_group_name      = var.node_group_name
-  iam_role_node        = var.iam_role_node
-  account_id           = var.account_id     # Pass the account ID variable
-  environment          = terraform.workspace # Pass the current workspace as environment
-  # Pass subnet IDs from the VPC module
-  subnet_ids = concat(
+  cluster_role_name   = var.cluster_role_name
+  eks_role_arn        = module.iam_role.eks_role_arn
+  node_group_name     = var.node_group_name
+  iam_role_node       = var.iam_role_node
+  load_balancer_policy_arn  = module.iam_role.load_balancer_controller_policy_arn  # Update this line
+  account_id          = var.account_id
+  environment         = terraform.workspace
+  subnet_ids          = concat(
     module.vpc.public_pub_subnet1_ids,
     module.vpc.public_pub_subnet2_ids,
     module.vpc.private_sub1_ids,
@@ -58,7 +58,7 @@ module "eks" {
     module.vpc.private_sub3_ids,
     module.vpc.private_sub4_ids
   )
- private_subnet_ids = concat(
+  private_subnet_ids  = concat(
     module.vpc.private_sub1_ids,
     module.vpc.private_sub2_ids
   )
@@ -66,5 +66,5 @@ module "eks" {
   endpoint_public_access = true
   endpoint_private_access = true
   cluster_tag         = var.cluster_tag
-
 }
+
