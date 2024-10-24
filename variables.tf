@@ -174,3 +174,8 @@ variable "security_group_name" {
   description = "The ID of the VPC where the security group will be created."
   type        = string
 }
+
+variable "eks_role_arn" {
+  description = "The ARN of the IAM role for the EKS cluster."
+  type        = string
+}
