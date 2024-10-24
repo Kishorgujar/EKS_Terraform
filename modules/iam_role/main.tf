@@ -141,7 +141,7 @@ resource "aws_iam_policy" "AWS_LoadBalancer_Controller_Policy" {
 
 # IAM Role for Load Balancer Controller
 resource "aws_iam_role" "EKS_LB_CNI_Role" {
-  name               = "lb-cni-role"
+  name               = var.lb-cni-role
   assume_role_policy = data.aws_iam_policy_document.EKS_VPC_CNI_assume_role_policy_LB.json
 }
 
