@@ -1,22 +1,26 @@
-locals {
-  account_id  = var.account_id  # Capture the account ID passed from the root module
-  environment = terraform.workspace  # Capture the current workspace name
+resource "random_string" "suffix" {
+  length  = 6
+  upper   = false
+  special = false
 }
 
-module "iam_role" {
-  source      = "../iam_role"  # Adjust the path if needed
+locals {
   account_id  = var.account_id
-  environment = terraform.workspace  # Capture the current workspace
+  environment = terraform.workspace
 }
 
 resource "aws_cloudwatch_log_group" "EKS_CLUSTER_LOGS" {
   name              = "/aws/eks/${var.cluster_name}/cluster"
   retention_in_days = 7
+
+  lifecycle {
+  #  prevent_destroy = true
+  }
 }
 
 resource "aws_eks_cluster" "this" {
   name                     = var.cluster_name
-  role_arn                 = module.iam_role.eks_role_arn  # Use the IAM role from the IAM module
+  role_arn                 = var.eks_role_arn  # Use the variable here
   version                  = var.kubernetes_version
   enabled_cluster_log_types = var.cluster_log_types
 
@@ -37,9 +41,9 @@ resource "aws_eks_cluster" "this" {
 }
 
 resource "aws_eks_node_group" "ec2_worker_nodes" {
-  cluster_name   = aws_eks_cluster.this.name
+  cluster_name    = aws_eks_cluster.this.name
   node_group_name = var.node_group_name
-  node_role_arn   = module.iam_role.node_role_arn  # Use the IAM role from the IAM module
+  node_role_arn   = var.node_role_arn  # Use the variable here
   subnet_ids      = var.private_subnet_ids
 
   scaling_config {
@@ -54,15 +58,16 @@ resource "aws_eks_node_group" "ec2_worker_nodes" {
 }
 
 resource "aws_eks_addon" "Fargate_EKS_VPC_CNI" {
-  cluster_name = var.cluster_name
+  cluster_name = aws_eks_cluster.this.name
   addon_name   = "vpc-cni"
+
   depends_on = [
-    aws_eks_cluster.this  # Ensure the cluster is created first
+    aws_eks_cluster.this
   ]
 }
 
 resource "aws_eks_addon" "EKS_Coredns_cni" {
-  cluster_name               = var.cluster_name
+  cluster_name               = aws_eks_cluster.this.name
   addon_name                 = "coredns"
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
@@ -73,13 +78,13 @@ resource "aws_eks_addon" "EKS_Coredns_cni" {
 }
 
 resource "aws_eks_addon" "EKS_kube_proxy_cni" {
-  cluster_name               = var.cluster_name
+  cluster_name               = aws_eks_cluster.this.name
   addon_name                 = "kube-proxy"
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
-  
+
   depends_on = [
-    aws_eks_cluster.this  # Ensure the cluster is created first
+    aws_eks_cluster.this
   ]
 }
 
@@ -131,12 +136,12 @@ data "aws_iam_policy_document" "EKS_Cluster_CNI_assume_role_policy_LB" {
 
 resource "aws_iam_role" "EKS_VPC_CNI_Role" {
   assume_role_policy = data.aws_iam_policy_document.EKS_Cluster_CNI_assume_role_policy.json
-  name               = "vpc-cni-role"
+  name               = "${local.environment}-vpc-cni-role-${random_string.suffix.result}"
 }
 
 resource "aws_iam_role" "EKS_LB_CNI_Role" {
   assume_role_policy = data.aws_iam_policy_document.EKS_Cluster_CNI_assume_role_policy_LB.json
-  name               = "new-lb-cni-role"
+  name               = "${local.environment}-lb-cni-role-${random_string.suffix.result}"
 }
 
 resource "aws_iam_role_policy_attachment" "EKS_VPC_CNI_Role_Attachment" {
@@ -145,7 +150,7 @@ resource "aws_iam_role_policy_attachment" "EKS_VPC_CNI_Role_Attachment" {
 }
 
 resource "aws_iam_role_policy_attachment" "EKS_LB_CNI_Role_Attachment" {
-  policy_arn = "arn:aws:iam::${local.account_id}:policy/AWSLoadBalancerControllerIAMPolicy"  # Ensure this ARN is correct
+  policy_arn = var.load_balancer_policy_arn  # Use the variable here
   role       = aws_iam_role.EKS_LB_CNI_Role.name
 }
 
