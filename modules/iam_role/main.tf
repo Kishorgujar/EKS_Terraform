@@ -1,22 +1,12 @@
-resource "aws_iam_role" "your_role" {
-  name               = "${var.environment}-example-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      },
-    ]
-  })
+resource "random_string" "suffix" {
+  length  = 8
+  upper   = false
+  special = false
 }
 
 # IAM Role for EKS
 resource "aws_iam_role" "eks_role" {
-  name               = var.eks_role_name
+  name               = "${var.environment}-eks-role-${random_string.suffix.result}"
   assume_role_policy = data.aws_iam_policy_document.eks_assume_role_policy.json
 
   tags = {
@@ -47,7 +37,7 @@ resource "aws_iam_role_policy_attachment" "eks_service_policy" {
 
 # IAM Role for Node Groups
 resource "aws_iam_role" "node_role" {
-  name               = var.node_role_name
+  name               = "${var.environment}-node-role-${random_string.suffix.result}"
   assume_role_policy = data.aws_iam_policy_document.node_assume_role_policy.json
 
   tags = {
@@ -83,7 +73,7 @@ resource "aws_iam_role_policy_attachment" "worker_node_policy" {
 
 # Policy for Allowing EKS to Pass the Node Role
 resource "aws_iam_policy" "allow_pass_role" {
-  name        = "AllowPassRole"
+  name        = "${var.environment}-AllowPassRole-${random_string.suffix.result}"
   description = "Allows EKS role to pass Node role"
 
   policy = jsonencode({
@@ -105,7 +95,7 @@ resource "aws_iam_role_policy_attachment" "pass_role_attachment" {
 
 # IAM Policy for AWS Load Balancer Controller
 resource "aws_iam_policy" "AWS_LoadBalancer_Controller_Policy" {
-  name        = var.load_balancer_controller_policy_name
+  name        = "${var.environment}-AWSLoadBalancerControllerIAMPolicy-${random_string.suffix.result}"
   path        = "/"
   description = "AWSLoadBalancerControllerIAMPolicy"
 
@@ -141,8 +131,12 @@ resource "aws_iam_policy" "AWS_LoadBalancer_Controller_Policy" {
 
 # IAM Role for Load Balancer Controller
 resource "aws_iam_role" "EKS_LB_CNI_Role" {
-  name               = var.lb-cni-role
+  name               = "${var.environment}-lb-cni-role-${random_string.suffix.result}"
   assume_role_policy = data.aws_iam_policy_document.EKS_VPC_CNI_assume_role_policy_LB.json
+
+  tags = {
+    Name = "${var.environment}-LB-CNI-Role"
+  }
 }
 
 data "aws_iam_policy_document" "EKS_VPC_CNI_assume_role_policy_LB" {
