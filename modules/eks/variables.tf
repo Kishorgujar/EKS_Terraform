@@ -106,10 +106,9 @@ variable "endpoint_public_access" {
   default     = true
 }
 
-variable "load_balancer_controller_policy_name" {
-  description = "ARN of the Load Balancer Controller policy"
+variable "load_balancer_policy_arn" {
+  description = "ARN of the Load Balancer Controller IAM Policy"
   type        = string
-  default = "AWSLoadBalancerControllerIAMPolicy"
 }
 
 variable "account_id" {
@@ -120,5 +119,11 @@ variable "account_id" {
 variable "environment" {
   description = "The environment for the deployment"
   type        = string
+}
+
+variable "eks_role_arn" {
+  description = "The ARN of the IAM role for the EKS cluster."
+  type        = string
+  # You can remove this if it's not being used
 }
 
