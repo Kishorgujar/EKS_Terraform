@@ -37,4 +37,8 @@ variable "environment" {
   description = "The environment for the deployment"
   type        = string
 }
+variable "lb_cni_role_name" {
+  type        = string
+  description = "The name of the load balancer CNI role."
+}
 
